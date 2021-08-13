@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-  package="com.react_app">
+  package="com.a">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
