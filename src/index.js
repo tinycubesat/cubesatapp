@@ -5,13 +5,15 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from './screens/homeScreen';
 import ConfigScreen from './screens/configScreen';
 import WifiSearchScreen from './screens/wifiSearchScreen';
+import BluetoothSearchScreen from './screens/bluetoothSearchScreen';
+import ConnectionChoiceScreen from './screens/connectionChoiceScreen';
 
 const Stack = createNativeStackNavigator();
 
 function App() {
     return (
         <NavigationContainer>
-            <Stack.Navigator initialRouteName="WifiSearch">
+            <Stack.Navigator initialRouteName="Home">
                 <Stack.Screen
                     name="Home"
                     component={HomeScreen}
@@ -25,6 +27,16 @@ function App() {
                 <Stack.Screen
                     name="WifiSearch"
                     component={WifiSearchScreen}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="BluetoothSearch"
+                    component={BluetoothSearchScreen}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="ChoseConnection"
+                    component={ConnectionChoiceScreen}
                     options={{ headerShown: false }}
                 />
             </Stack.Navigator>

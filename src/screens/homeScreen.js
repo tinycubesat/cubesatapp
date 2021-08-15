@@ -6,21 +6,30 @@ import {
     TextInput,
     SafeAreaView,
     ScrollView,
+    NativeModules,
+    NativeEventEmitter,
+    TouchableOpacity,
 } from 'react-native';
-import { Bar } from '../components/bar';
+import { ErrorMessage } from "../components/errorMessage"
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import BleManager from 'react-native-ble-manager';
 
-const HomeScreen = () => {
+const BleManagerModule = NativeModules.BleManager;
+const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
+
+const HomeScreen = ({ navigation: { replace } }) => {
     const [websocket, websocketState] = useState(undefined);
     const [websocketConnection, websocketConnectionState] = useState(2);
-    const [url, urlState] = useState(undefined);
     const [errorMessage, errorMessageState] = useState(undefined);
+    const [connection, connectionState] = useState(undefined);
 
     const createWs = async () => {
-        if (!url) return errorMessageState("insira algum link!");
-        if (/\ /.test(url)) return errorMessageState("url invalido!");
+        if (!(connection))
+            return replace("ChoseConnection");
+        if (connection.connectionType !== 0)
+            return replace("ChoseConnection");
 
-        const ws = new WebSocket(url.startsWith("ws://") ? url : `ws://${url}`);
+        const ws = new WebSocket(`ws://${connection.ip}`);
 
         ws.onopen = () => {
             websocketConnectionState(0);
@@ -41,37 +50,58 @@ const HomeScreen = () => {
             websocketConnectionState(2);
         };
 
-        await AsyncStorage.setItem("url", url);
         websocketState(ws);
         websocketConnectionState(1);
-        return errorMessageState(undefined);
+        errorMessageState(undefined);
+    };
+    const connect = () => {
+        if (!(connection))
+            return replace("ChoseConnection");
+        if (!(connection.connectionType))
+            return replace("ChoseConnection");
+
+        switch (connection.connectionType) {
+            case 0:
+                createWs();
+                break;
+
+            default:
+                break;
+        }
     };
 
     useEffect(async () => {
         try {
-            const lastUrl = await AsyncStorage.getItem("url");
-            return urlState(lastUrl);
+            connectionState(JSON.parse(await AsyncStorage.getItem("connection")));
         }
-        catch { return errorMessageState("Digite o ip antes de continuar!"); }
+        catch {
+            replace("ChoseConnection");
+        }
     }, []);
+
     return (<View>
         <View>
+            {connection && connection.connectionType == 0 && <Text> IP: {connection.ip}</Text>}
+            {connection && connection.connectionType == 1 && <Text> BT name: {connection.name}</Text>}
+            {connection && connection.connectionType == 1 && <Text> BT id: {connection.id}</Text>}
             <Text> Estado: {websocketConnection == 0 ? "conectado" : (websocketConnection == 1 ? "conectando" : "desconectado")}</Text>
         </View>
-        <Bar />
+
         <View>
-            <Text style={{ fontSize: 40, textAlign: 'center' }}>IP</Text>
-            <TextInput
-                onChangeText={text => urlState(text)}
+            <Button
+                title="conectar"
+                onPress={createWs}
+                disabled={(websocketConnection === 0 || websocketConnection === 1) && !connection}
             />
             <Button
-                title="Salvar"
-                onPress={createWs}
+                title="mudar tipo de conexão"
+                onPress={() => replace("ChoseConnection")}
+                disabled={(websocketConnection === 0 || websocketConnection === 1) && !connection}
             />
         </View>
 
-        {errorMessage && <Text style={{ color: "#ff0000" }}>AVISO: {errorMessage}</Text>}
-    </View>);
+        {errorMessage && <ErrorMessage message={`AVISO: ${errorMessage}`} />}
+    </View >);
 };
 
 export default HomeScreen;

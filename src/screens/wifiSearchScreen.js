@@ -21,14 +21,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const defaultPort = 81;
 const numericRegex = /[^0-9]/g;
 
-const WifiSearchScreen = () => {
+const WifiSearchScreen = ({ navigation: { replace } }) => {
     const [devices, devicesState] = useState([]);
     const [device, deviceState] = useState(undefined);
     const [searchButton, searchButtonState] = useState(false);
     const [searching, searchingState] = useState(false);
-    const [port, portState] = useState(defaultPort);
-
-    var id = 0;
+    const [port, portState] = useState(defaultPort); 
 
     const changePort = (newPort) => {
         if (newPort == "") return portState(undefined);
@@ -74,8 +72,8 @@ const WifiSearchScreen = () => {
             timeout: 40
         }), 100);
     };
-    const deviceList = (ip) => {
-        return (<TouchableOpacity key={id++} style={{ margin: 0, marginLeft: 5, }} onPress={() => deviceOnPress(ip)}>
+    const deviceList = (ip, id) => {
+        return (<TouchableOpacity key={id} style={{ margin: 0, marginLeft: 5, }} onPress={() => deviceOnPress(ip)}>
             <Text style={{ fontSize: 25, }}>{ip}</Text>
         </TouchableOpacity>);
     };
@@ -83,7 +81,8 @@ const WifiSearchScreen = () => {
         if (!ip)
             return ToastAndroid.showWithGravityAndOffset("ERRO", ToastAndroid.SHORT, ToastAndroid.BOTTOM, 0, 80);
 
-        await AsyncStorage.setItem("connection", { connectionType: 0, ip });
+        await AsyncStorage.setItem("connection", JSON.stringify({ connectionType: 0, ip }));
+        return replace("Home");
     };
 
     return (<View style={styles.container}>
@@ -92,7 +91,7 @@ const WifiSearchScreen = () => {
                 <Text>Procurando dispositivos...</Text>
                 <Text>{device}</Text>
             </View> : devices.length > 0 ? <ScrollView style={{ width: 300, height: 300 }}>
-                {devices.map((i) => deviceList(i))}
+                {devices.map((i, index) => deviceList(i, index))}
             </ScrollView> : <View style={styles.noDevices}>
                 <Text>Nenhum Dispositivo Detectado!</Text>
             </View>}
