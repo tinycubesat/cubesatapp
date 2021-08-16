@@ -83,9 +83,10 @@ const HomeScreen = ({ navigation: { replace } }) => {
                     }
                 };
 
-                websocketState(ws);
+                if (mounted)
+                {websocketState(ws);
                 websocketConnectionState(1);
-                errorMessageState(undefined);
+                errorMessageState(undefined);}
                 break;
 
             case 1:
@@ -119,7 +120,9 @@ const HomeScreen = ({ navigation: { replace } }) => {
 
     useEffect(async () => {
         try {
-            connectionState(JSON.parse(await AsyncStorage.getItem("connection")));
+            const connection = await AsyncStorage.getItem("connection")
+            if (mounted)
+            connectionState(JSON.parse(connection));
         }
         catch {
             replace("ChoseConnection");
