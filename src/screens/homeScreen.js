@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
 } from 'react-native';
 import { ErrorMessage } from "../components/errorMessage"
+import { LineChart } from '../components/lineChart';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BleManager from 'react-native-ble-manager';
 
@@ -22,47 +23,93 @@ const HomeScreen = ({ navigation: { replace } }) => {
     const [websocketConnection, websocketConnectionState] = useState(2);
     const [errorMessage, errorMessageState] = useState(undefined);
     const [connection, connectionState] = useState(undefined);
+    const [chartDataAtt, chartDataAttState] = useState({});
 
-    const createWs = async () => {
-        if (!(connection))
-            return replace("ChoseConnection");
-        if (connection.connectionType !== 0)
-            return replace("ChoseConnection");
+    const chartData = {};
+    var mounted = true;
 
-        const ws = new WebSocket(`ws://${connection.ip}`);
+    const createBluetoothConnection = () => {
 
-        ws.onopen = () => {
-            websocketConnectionState(0);
-        };
-
-        ws.onmessage = (e) => {
-            console.log(e.data);
-        };
-
-        ws.onerror = (e) => {
-            errorMessageState("Erro ao tentar se conectar!");
-            websocketState(undefined);
-            websocketConnectionState(2);
-        };
-
-        ws.onclose = (e) => {
-            websocketState(undefined);
-            websocketConnectionState(2);
-        };
-
-        websocketState(ws);
-        websocketConnectionState(1);
-        errorMessageState(undefined);
     };
     const connect = () => {
         if (!(connection))
             return replace("ChoseConnection");
-        if (!(connection.connectionType))
+        if (connection.connectionType === undefined)
             return replace("ChoseConnection");
 
         switch (connection.connectionType) {
             case 0:
-                createWs();
+                const ws = new WebSocket(`ws://${connection.ip}`);
+
+                ws.onopen = () => {
+                    if (mounted)
+                        websocketConnectionState(0);
+                };
+
+                ws.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data);
+                        if (typeof data !== "object") throw "err";
+
+                        const keys = Object.keys(data);
+                        for (var i = 0; i < keys.length; i++) {
+                            if (typeof data[keys[i]] === "number") {
+                                if (!chartData[keys[i]]) chartData[keys[i]] = [];
+                                chartData[keys[i]].push(data[keys[i]]);
+                            }
+                        }
+
+                        if (mounted) {
+                            chartDataAttState(chartData);
+                        }
+
+                    } catch {
+                        return;
+                    }
+                };
+
+                ws.onerror = (e) => {
+                    if (mounted) {
+                        errorMessageState("Erro ao tentar se conectar!");
+                        websocketState(undefined);
+                        websocketConnectionState(2);
+                    }
+                };
+
+                ws.onclose = (e) => {
+                    if (mounted) {
+                        websocketState(undefined);
+                        websocketConnectionState(2);
+                    }
+                };
+
+                websocketState(ws);
+                websocketConnectionState(1);
+                errorMessageState(undefined);
+                break;
+
+            case 1:
+                createBluetoothConnection();
+                break;
+
+            default:
+                break;
+        }
+    };
+    const disconnect = () => {
+        if (!(connection))
+            return replace("ChoseConnection");
+        if (connection.connectionType === undefined)
+            return replace("ChoseConnection");
+
+        switch (connection.connectionType) {
+            case 0:
+                if (websocketConnection !== 0) return;
+                websocket.close();
+                break;
+
+            case 1:
+                createBluetoothConnection();
                 break;
 
             default:
@@ -77,9 +124,22 @@ const HomeScreen = ({ navigation: { replace } }) => {
         catch {
             replace("ChoseConnection");
         }
+
+        return (() => {
+            mounted = false;
+            disconnect();
+        });
     }, []);
 
     return (<View>
+        <View>
+            {chartDataAtt.temperature && chartDataAtt.temperature > 1 && <LineChart
+                dataType="temperatura"
+                data={chartDataAtt.temperature}
+                formatLabel={(value) => `${value}ºC`}
+            />}
+        </View>
+
         <View>
             {connection && connection.connectionType == 0 && <Text> IP: {connection.ip}</Text>}
             {connection && connection.connectionType == 1 && <Text> BT name: {connection.name}</Text>}
@@ -89,9 +149,9 @@ const HomeScreen = ({ navigation: { replace } }) => {
 
         <View>
             <Button
-                title="conectar"
-                onPress={createWs}
-                disabled={(websocketConnection === 0 || websocketConnection === 1) && !connection}
+                title={websocketConnection !== 0 || websocketConnection === 1 ? "conectar" : "desconectar"}
+                onPress={websocketConnection === 0 ? disconnect : connect}
+                disabled={websocketConnection === 1}
             />
             <Button
                 title="mudar tipo de conexão"
