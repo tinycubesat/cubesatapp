@@ -1,10 +1,6 @@
 import React, { useState, useEffect, } from "react";
 import {
-    View,
-    Text,
     TextInput,
-    Button,
-    TouchableOpacity,
     SafeAreaView,
     ScrollView,
     NetInfo,
@@ -14,8 +10,15 @@ import {
     StyleSheet,
     DeviceEventEmitter,
 } from "react-native";
+import {
+    View,
+    Text,
+    Button,
+    TouchableOpacity,
+} from "../components/styledComponents";
 import FindLocalDevices from 'react-native-find-local-devices';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import theme from "../core/theme";
 
 
 const defaultPort = 81;
@@ -26,7 +29,7 @@ const WifiSearchScreen = ({ navigation: { replace } }) => {
     const [device, deviceState] = useState(undefined);
     const [searchButton, searchButtonState] = useState(false);
     const [searching, searchingState] = useState(false);
-    const [port, portState] = useState(defaultPort); 
+    const [port, portState] = useState(defaultPort);
 
     const changePort = (newPort) => {
         if (newPort == "") return portState(undefined);
@@ -82,11 +85,11 @@ const WifiSearchScreen = ({ navigation: { replace } }) => {
             return ToastAndroid.showWithGravityAndOffset("ERRO", ToastAndroid.SHORT, ToastAndroid.BOTTOM, 0, 80);
 
         await AsyncStorage.setItem("connection", JSON.stringify({ connectionType: 0, ip }));
-        return replace("Home");
+        return replace("Wifi");
     };
 
     return (<View style={styles.container}>
-        <SafeAreaView style={{ ...styles.devicesContainer, }}>
+        <SafeAreaView style={styles.devicesContainer}>
             {searching ? <View style={styles.noDevices}>
                 <Text>Procurando dispositivos...</Text>
                 <Text>{device}</Text>
@@ -117,16 +120,18 @@ const WifiSearchScreen = ({ navigation: { replace } }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        flexDirection: "column"
+        flexDirection: "column",
+        backgroundColor: theme.background,
     },
     devicesContainer: {
         width: 300,
         height: 300,
-        borderColor: "#000000",
+        borderColor: theme.border,
         borderWidth: 5,
         borderRadius: 15,
         overflow: "hidden",
         margin: 5,
+        alignSelf: "center",
     },
     noDevices: {
         width: 300,

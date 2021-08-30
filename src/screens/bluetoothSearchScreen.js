@@ -8,18 +8,19 @@ import {
     SafeAreaView,
     StyleSheet,
     ScrollView,
-    View,
-    Text,
     StatusBar,
     NativeModules,
     NativeEventEmitter,
-    Button,
     Platform,
     PermissionsAndroid,
-    FlatList,
     BackHandler,
-    TouchableHighlight as Touchable,
 } from 'react-native';
+import {
+    View,
+    Text,
+    Button,
+    TouchableOpacity as Touchable,
+} from "../components/styledComponents";
 import BleManager from 'react-native-ble-manager';
 
 const BleManagerModule = NativeModules.BleManager;
@@ -53,7 +54,7 @@ const BluetoothSearchScreen = ({ navigation: { replace } }) => {
         if (peripheral && peripheral.id && peripheral.name) {
             try {
                 await AsyncStorage.setItem("connection", JSON.stringify({ connectionType: 1, id: peripheral.id, name: peripheral.name }));
-                replace("Home");
+                replace("Bluetooth");
             }
             catch {
                 BackHandler.exitApp();
@@ -122,9 +123,9 @@ const BluetoothSearchScreen = ({ navigation: { replace } }) => {
         })
     }, []);
 
-    return (<View>
+    return (<View style={{ flex: 1, }}>
         <View>
-            <SafeAreaView style={{ borderColor: '#000', width: 300, height: 300, borderWidth: 5, borderRadius: 15, }}>
+            <SafeAreaView style={{ borderColor: '#000', width: 300, height: 300, borderWidth: 5, borderRadius: 15, marginBottom: 10, marginTop: 5, alignSelf: 'center', }}>
                 {searching ? <View>
                     <Text>procurando...</Text>
                 </View> : peripherals.length > 0 ? < ScrollView >
