@@ -16,27 +16,28 @@ import ErrorMessage from "../components/ErrorMessage"
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BleManager from 'react-native-ble-manager';
 import ChartContainer from '../components/ChartContainer';
+import { openDatabase, databaseMethods } from '../services/database';
 
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 
 const BT_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
-const BT_CHARACTERISTIC_UUID_RX = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
 const BT_SENSOR_DATA_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E";
 
 const HomeScreen = ({ navigation: { replace } }) => {
-    const [bluetoothConnection, bluetoothConnectionState] = useState(undefined);
     const [connectionType, connectionTypeState] = useState(1);
     const [errorMessage, errorMessageState] = useState(undefined);
+    const [_, forceComponentUpdate] = useState(undefined);
 
     const chartData = useRef([]);
+    const intervalUpdate = useRef(undefined);
     const mounted = useRef(false);
 
     const connect = async () => {
         if (!(connection))
-            return replace("ChoseConnection");
+            return replace("ChooseConnection");
         if (connection.connectionType === undefined)
-            return replace("ChoseConnection");
+            return replace("ChooseConnection");
 
         connectionTypeState(1);
         if (Platform.OS === "android") {
@@ -45,8 +46,13 @@ const HomeScreen = ({ navigation: { replace } }) => {
         }
 
         await BleManager.connect(connection.id);
-        if (!await BleManager.retrieveServices(connection.id))
+        if (!await BleManager.retrieveServices(connection.id)) {
+            if (mounted.current) {
+                connectionTypeState(2);
+                errorMessage("Erro ao tentar se conectar!");
+            }
             return;
+        }
 
         try {
             await BleManager.startNotification(
@@ -59,6 +65,7 @@ const HomeScreen = ({ navigation: { replace } }) => {
         }
 
         if (mounted.current) {
+            intervalUpdate.current = setInterval(() => forceComponentUpdate(Math.random()), 10000);
             connectionTypeState(0);
             getRSSI();
         }
@@ -66,29 +73,17 @@ const HomeScreen = ({ navigation: { replace } }) => {
 
     const disconnect = async () => {
         if (!(connection))
-            return replace("ChoseConnection");
+            return replace("ChooseConnection");
         if (connection.connectionType === undefined)
-            return replace("ChoseConnection");
+            return replace("ChooseConnection");
 
-        switch (connection.connectionType) {
-            case 0:
-                if (connectionType !== 0) return;
-                bluetoothConnection.close();
-                break;
+        ToastAndroid.showWithGravity("Essa função está em construção!", ToastAndroid.SHORT, ToastAndroid.BOTTOM);
+        if (connectionType !== 0) return;
 
-            case 1:
-                ToastAndroid.showWithGravity("Essa função está em construção!", ToastAndroid.SHORT, ToastAndroid.BOTTOM);
-                if (connectionType !== 0) return;
-
-                await BleManager.disconnect(connection.id);
-                if (mounted.current) {
-                    bluetoothConnectionState(undefined);
-                    connectionTypeState(2);
-                }
-                break;
-
-            default:
-                break;
+        await BleManager.disconnect(connection.id);
+        if (mounted.current) {
+            clearInterval(intervalUpdate.current);
+            connectionTypeState(2);
         }
     };
 
@@ -113,14 +108,35 @@ const HomeScreen = ({ navigation: { replace } }) => {
 
         switch (peripheral.characteristic.toUpperCase()) {
             case BT_SENSOR_DATA_UUID:
-                const data = String.fromCharCode.apply(null, new Uint8Array(peripheral.value));
+                try {
+                    const data = JSON.stringify(String.fromCharCode.apply(null, new Uint8Array(peripheral.value)));
+                    if (typeof data !== "object") throw "";
+                    if (!(data && data.sensorName && data.formatLabel && data.data)) throw '';
 
-                if (!chartData.temperature) chartData.temperature = [];
-                chartData.temperature.push(Number(data));
+                    for (var i = 0; i < chartData.current.length; i++) {
+                        if (chartData.current[i].sensorName === data.sensorName) {
+                            if (database.current) databaseMethods.insertData(
+                                database.current,
+                                "Sensors",
+                                [
+                                    "SensorName",
+                                    "SensorValue",
+                                    "Timestamp",
+                                ],
+                                [
+                                    `'${chartData.current[i].sensorName}'`,
+                                    data.data,
+                                    Date.now(),
+                                ]
+                            );
+                            return chartData.current[i].data.push(data.data);
+                        }
+                    }
 
-                if (mounted.current)
-                    chartDataAttState(chartData);
-                break;
+                    return chartData.current.push({ sensorName: data.sensorName, data: [data.data], formatLabel: data.formatLabel });
+                } catch {
+                    return;
+                }
 
             default:
                 break;
@@ -128,6 +144,21 @@ const HomeScreen = ({ navigation: { replace } }) => {
     };
 
     useEffect(async () => {
+        try {
+            database.current = await openDatabase();
+
+            await databaseMethods.createTableIfNotExists(
+                database.current,
+                "Sensors",
+                databaseMethods.mergeColumns(
+                    databaseMethods.createColumn("SensorName", "varchar(255)"),
+                    databaseMethods.createColumn("SensorValue", "DOUBLE"),
+                    databaseMethods.createColumn("Timestamp", "INT"),
+                ),
+            );
+        }
+        catch { errorMessageState("Erro ao tentar abrir o banco de dados!"); }
+
         try {
             mounted.current = true;
 
@@ -147,10 +178,11 @@ const HomeScreen = ({ navigation: { replace } }) => {
                 }
             }
         }
-        catch { return replace("ChoseConnection"); }
+        catch { return replace("ChooseConnection"); }
 
         connectionTypeState(2);
         return (() => {
+            clearInterval(intervalUpdate.current);
             mounted.current = false;
             bleManagerEmitter.removeAllListeners();
             disconnect();
@@ -182,12 +214,12 @@ const HomeScreen = ({ navigation: { replace } }) => {
             />
             <Button
                 title="mudar tipo de conexão"
-                onPress={() => replace("ChoseConnection")}
+                onPress={() => replace("ChooseConnection")}
                 disabled={(connectionType === 0 || connectionType === 1) && !connection}
             />
         </View>
 
-        {errorMessage && <ErrorMessage message={`AVISO: ${errorMessage}`} />}
+        {errorMessage && <ErrorMessage message={`AVISO: ${errorMessage}`} onClose={() => errorMessageState(undefined)} />}
     </View >);
 };
 

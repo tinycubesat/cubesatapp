@@ -11,7 +11,7 @@ export const Text = styled.Text`
   color: ${theme.text};
 `;
 
-export const Button = ({ onPress, title }) => <B color={theme.card} onPress={onPress} title={title} />;
+export const Button = ({ onPress, title, style }) => <B color={theme.card} style={style} onPress={onPress} title={title} />;
 
 export const TouchableOpacity = styled.TouchableOpacity`
   background-color: ${theme.card};

@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import WellcomeScreen from './screens/wellcomeScreen';
 import ScreenWifi from './screens/screenWifi';
 import ScreenBluetooth from './screens/screenBluetooth';
 import ConfigScreen from './screens/configScreen';
@@ -14,7 +15,12 @@ const Stack = createNativeStackNavigator();
 function App() {
     return (
         <NavigationContainer>
-            <Stack.Navigator initialRouteName="Wifi">
+            <Stack.Navigator initialRouteName="Wellcome">
+                <Stack.Screen
+                    name="Wellcome"
+                    component={WellcomeScreen}
+                    options={{ headerShown: false }}
+                />
                 <Stack.Screen
                     name="Wifi"
                     component={ScreenWifi}
@@ -41,7 +47,7 @@ function App() {
                     options={{ headerShown: false }}
                 />
                 <Stack.Screen
-                    name="ChoseConnection"
+                    name="ChooseConnection"
                     component={ConnectionChoiceScreen}
                     options={{ headerShown: false }}
                 />

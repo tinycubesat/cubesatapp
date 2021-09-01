@@ -11,6 +11,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import theme from '../core/theme';
 import ChartContainer from '../components/ChartContainer';
 
+import { openDatabase, databaseMethods } from '../services/database';
+
 const HomeScreen = ({ navigation: { replace } }) => {
     const [websocket, websocketState] = useState(undefined);
     const [websocketConnection, websocketConnectionState] = useState(1);
@@ -21,6 +23,7 @@ const HomeScreen = ({ navigation: { replace } }) => {
     const commandInput = useRef(undefined);
     const chartData = useRef([]);
     const intervalUpdate = useRef(undefined);
+    const database = useRef(undefined);
     const mounted = useRef(false);
 
     const setState = (state, data) => {
@@ -40,8 +43,23 @@ const HomeScreen = ({ navigation: { replace } }) => {
             if (!(data && data.sensorName && data.formatLabel && data.data)) throw '';
 
             for (var i = 0; i < chartData.current.length; i++) {
-                if (chartData.current[i].sensorName === data.sensorName)
+                if (chartData.current[i].sensorName === data.sensorName) {
+                    if (database.current) databaseMethods.insertData(
+                        database.current,
+                        "Sensors",
+                        [
+                            "SensorName",
+                            "SensorValue",
+                            "Timestamp",
+                        ],
+                        [
+                            `'${chartData.current[i].sensorName}'`,
+                            data.data,
+                            Date.now(),
+                        ]
+                    );
                     return chartData.current[i].data.push(data.data);
+                }
             }
 
             return chartData.current.push({ sensorName: data.sensorName, data: [data.data], formatLabel: data.formatLabel });
@@ -76,7 +94,7 @@ const HomeScreen = ({ navigation: { replace } }) => {
 
     const connect = async () => {
         if (!(connection))
-            return replace("ChoseConnection");
+            return replace("ChooseConnection");
 
         const ws = new WebSocket(`ws://${connection.ip}`);
 
@@ -95,7 +113,7 @@ const HomeScreen = ({ navigation: { replace } }) => {
     };
     const disconnect = async () => {
         if (!(connection))
-            return replace("ChoseConnection");
+            return replace("ChooseConnection");
         if (websocketConnection !== 0)
             return;
 
@@ -103,6 +121,27 @@ const HomeScreen = ({ navigation: { replace } }) => {
     };
 
     useEffect(async () => {
+        try {
+            database.current = await openDatabase();
+
+            // await database.current.executeSql("DROP TABLE Sensors", []);
+
+            await databaseMethods.createTableIfNotExists(
+                database.current,
+                "Sensors",
+                databaseMethods.mergeColumns(
+                    databaseMethods.createColumn("SensorName", "varchar(255)"),
+                    databaseMethods.createColumn("SensorValue", "DOUBLE"),
+                    databaseMethods.createColumn("Timestamp", "INT"),
+                ),
+            );
+
+            // console.log("search: ", JSON.stringify(await databaseMethods.searchValue(database.current, "Sensors")))
+        }
+        catch {
+            errorMessageState("Erro ao tentar abrir o banco de dados!");
+        }
+
         try {
             mounted.current = true;
 
@@ -114,7 +153,7 @@ const HomeScreen = ({ navigation: { replace } }) => {
             }
         }
         catch {
-            replace("ChoseConnection");
+            replace("ChooseConnection");
         }
 
         websocketConnectionState(2);
@@ -141,7 +180,7 @@ const HomeScreen = ({ navigation: { replace } }) => {
             justifyContent: 'space-between',
             paddingRight: 10,
             paddingLeft: 10,
-            marginBottom:5,
+            marginBottom: 5,
         }}>
             {connection && connection.connectionType === 0 && <Text> IP: {connection.ip}</Text>}
             <Text> Estado: {websocketConnection === 0 ? "conectado" : (websocketConnection === 1 ? "conectando" : "desconectado")}</Text>
@@ -180,7 +219,7 @@ const HomeScreen = ({ navigation: { replace } }) => {
             <Button
                 style={{ flex: 1, }}
                 title="mudar tipo de conexão"
-                onPress={() => replace("ChoseConnection")}
+                onPress={() => replace("ChooseConnection")}
                 disabled={(websocketConnection === 0 || websocketConnection === 1) && !connection}
             />
         </View>);
