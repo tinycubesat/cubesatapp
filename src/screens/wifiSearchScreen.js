@@ -48,7 +48,7 @@ const WifiSearchScreen = ({ navigation: { replace } }) => {
         searchButtonState(true);
 
         DeviceEventEmitter.addListener('NEW_DEVICE_FOUND', (device) => {
-            devicesState([...devices, `${device.ipAddress}:${device.port}`])
+            devicesState([...devices, `${device.ipAddress}:${device.port}`]);
         });
 
         DeviceEventEmitter.addListener('CHECK', (device) => {

@@ -6,6 +6,9 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "start": "react-native start",
+    "prebuild-android": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/",
+    "build-android": "cd android",
+    "postbuild-android": "gradlew assembleRelease",
     "test": "jest",
     "lint": "eslint ."
   },
@@ -15,7 +18,7 @@
     "@react-navigation/native": "^6.0.2",
     "@react-navigation/native-stack": "^6.0.5",
     "react": "17.0.1",
-    "react-native": "0.64.2",
+    "react-native": "^0.66.0",
     "react-native-ble-manager": "^7.6.0",
     "react-native-find-local-devices": "^1.3.5",
     "react-native-gesture-handler": "^1.10.3",
